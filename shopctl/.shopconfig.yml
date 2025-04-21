@@ -1,0 +1,5 @@
+ver: v0
+contexts:
+    - alias: devauto1
+      store: devauto1.myshopify.com
+currentContext: devauto1

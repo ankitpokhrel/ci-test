@@ -1,0 +1,95 @@
+name: Discount + Validation Pipeline
+
+on:
+  schedule:
+    - cron: "0 1 * * *"  # Every day at 1 AM UTC
+  workflow_dispatch:
+
+jobs:
+  validate-products:
+    runs-on: ubuntu-latest
+    env:
+      SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+      SHOPIFY_CONFIG_HOME: ${{ github.workspace }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup ShopCTL
+        uses: ./.github/workflows/actions/setup-shopctl
+
+      - name: Run validation script
+        run: |
+          chmod +x scripts/nightly_validate.sh
+          ./scripts/nightly_validate.sh | tee validation.log
+
+      - name: Upload log
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-log
+          path: |
+            validation.log
+            invalid_products.csv
+
+  high-inventory-discount:
+    runs-on: ubuntu-latest
+    env:
+      SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup ShopCTL
+        uses: ./.github/workflows/actions/setup-shopctl
+
+      - name: Run inventory discount script
+        run: |
+          chmod +x scripts/high_inventory_discount.sh
+          ./scripts/high_inventory_discount.sh | tee inventory.log
+
+      - name: Upload log
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory-log
+          path: |
+            inventory.log
+            inventory_discounts.csv
+
+  customer-discount:
+    runs-on: ubuntu-latest
+    env:
+      SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup ShopCTL
+        uses: ./.github/workflows/actions/setup-shopctl
+
+      - name: Run customer discount script
+        run: |
+          chmod +x scripts/customer_segmentation.sh
+          ./scripts/customer_segmentation.sh | tee customer.log
+
+      - name: Upload log
+        uses: actions/upload-artifact@v4
+        with:
+          name: customer-log
+          path: |
+            customer.log
+            weekly_customer_discounts.csv
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [validate-products, high-inventory-discount, customer-discount]
+    steps:
+      - name: Download all logs
+        uses: actions/download-artifact@v4
+        with:
+          path: logs
+
+      - name: Print logs (debug)
+        run: |
+          cat logs/validation-log/validation.log
+          cat logs/inventory-log/inventory.log
+          cat logs/customer-log/customer.log
