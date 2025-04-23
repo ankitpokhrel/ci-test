@@ -85,8 +85,6 @@ jobs:
     if: ${{ always() && needs.export-products.outputs.has-data == 'true' }}
     runs-on: ubuntu-latest
     env:
-      SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
-      SHOPIFY_CONFIG_HOME: ${{ github.workspace }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     steps:
